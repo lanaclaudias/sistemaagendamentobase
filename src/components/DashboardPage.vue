@@ -12,6 +12,13 @@
         placeholder="Buscar nome de cliente"
         @input="filterAppointments"
       />
+      <button
+        class="btn-delete-all"
+        :disabled="appointments.length === 0"
+        @click="confirmDeleteAll"
+      >
+        🗑️ Excluir todos os agendamentos
+      </button>
     </div>
 
     <table class="appointments-table">
@@ -56,6 +63,15 @@
         <button @click="closeModal">Não</button>
       </div>
     </div>
+
+    <div v-if="showDeleteAllModal" class="modal-overlay">
+      <div class="modal">
+        <h2>Excluir todos os agendamentos?</h2>
+        <p>Essa ação excluirá permanentemente todos os agendamentos cadastrados.</p>
+        <button class="modal-confirm-delete" @click="deleteAllAppointments">Sim, excluir todos</button>
+        <button @click="closeDeleteAllModal">Não</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -70,6 +86,7 @@ export default {
       appointments: [],
       filteredAppointments: [],
       showModal: false,
+      showDeleteAllModal: false,
       appointmentToDelete: null,
     };
   },
@@ -130,6 +147,23 @@ export default {
         console.error('Erro ao excluir agendamento:', error);
         alert('Erro ao excluir agendamento. Tente novamente.');
       }
+    },
+    confirmDeleteAll() {
+      this.showDeleteAllModal = true;
+    },
+    async deleteAllAppointments() {
+      try {
+        await axios.delete('http://localhost:3000/api/agendamento/todos');
+        this.appointments = [];
+        this.filteredAppointments = [];
+        this.closeDeleteAllModal();
+      } catch (error) {
+        console.error('Erro ao excluir todos os agendamentos:', error);
+        alert('Erro ao excluir todos os agendamentos. Tente novamente.');
+      }
+    },
+    closeDeleteAllModal() {
+      this.showDeleteAllModal = false;
     },
     closeModal() {
       this.showModal = false;
@@ -213,6 +247,22 @@ body {
   outline: none;
   border-color: #e2229f;
   box-shadow: 0 0 5px rgba(226, 34, 159, 0.3);
+}
+
+.btn-delete-all {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #c41887;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.btn-delete-all:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 /* Tabela de Agendamentos */
@@ -353,6 +403,10 @@ tr:hover {
 }
 
 .modal button:hover {
+  background-color: #c41887;
+}
+
+.modal .modal-confirm-delete {
   background-color: #c41887;
 }
 

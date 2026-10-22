@@ -1,5 +1,7 @@
 const Agendamento = require('../models/agendamentoPage');
 const HorarioDisponiveis = require('../models/formHora');
+const sequelize = require('../config/database');
+const { Op } = require('sequelize');
 const createAgendamento = async (req, res) => {
     try {
       const { nomeCliente, telefone, servico, subServico, dia, horario } = req.body;
@@ -132,10 +134,57 @@ const createAgendamento = async (req, res) => {
     }
   };
 
+  const deleteAllAgendamentos = async (req, res) => {
+    let transaction;
+
+    try {
+      transaction = await sequelize.transaction();
+      const agendamentos = await Agendamento.findAll({
+        attributes: ['horarioId'],
+        transaction
+      });
+      const horarioIds = agendamentos
+        .map(({ horarioId }) => horarioId)
+        .filter((horarioId) => horarioId !== null);
+
+      await Agendamento.destroy({
+        where: {},
+        transaction
+      });
+
+      if (horarioIds.length > 0) {
+        await HorarioDisponiveis.update(
+          { status: 'disponivel' },
+          {
+            where: {
+              id: {
+                [Op.in]: horarioIds
+              }
+            },
+            transaction
+          }
+        );
+      }
+
+      await transaction.commit();
+      res.status(200).json({
+        message: 'Agendamentos excluídos com sucesso',
+        deletedCount: agendamentos.length
+      });
+    } catch (error) {
+      if (transaction) {
+        await transaction.rollback();
+      }
+      console.error('Erro ao excluir todos os agendamentos:', error.message);
+      res.status(500).json({ error: 'Erro ao excluir todos os agendamentos' });
+    }
+  };
+
 module.exports = {
   createAgendamento,
   getAgendamentos,
   getAgendamentoById,
   updateAgendamento,
-  deleteAgendamento
+  deleteAgendamento,
+  deleteAllAgendamentos
 };
